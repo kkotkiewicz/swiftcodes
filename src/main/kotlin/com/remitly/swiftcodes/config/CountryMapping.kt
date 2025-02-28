@@ -1,4 +1,4 @@
-package com.remitly.swiftcodes
+package com.remitly.swiftcodes.config
 
 import com.remitly.swiftcodes.exception.InvalidCountryCodeException
 

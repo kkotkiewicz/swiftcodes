@@ -21,7 +21,7 @@ class SwiftCodesController(
     @GetMapping("/{swiftCode}")
     fun getBankDetails(
         @PathVariable
-        @Pattern(regexp = "^[A-Z]{11}$", message = "Invalid SWIFT code format (must be 11 capital letters)")
+        @Pattern(regexp = "^[A-Z0-9]{11}$", message = "Invalid SWIFT code format (must be 11 capital letters)")
         swiftCode: String
     ): BankDetails {
         return banksService.getBankDetails(swiftCode)
@@ -44,7 +44,7 @@ class SwiftCodesController(
     @DeleteMapping("/{swiftCode}")
     fun deleteBankDetails(
         @PathVariable
-        @Pattern(regexp = "^[A-Z]{11}$", message = "Invalid SWIFT code format (must be 11 capital letters)")
+        @Pattern(regexp = "^[A-Z0-9]{11}$", message = "Invalid SWIFT code format (must be 11 capital letters)")
         swiftCode: String
     ): Message {
         return banksService.deleteBankDetails(swiftCode)
@@ -67,7 +67,7 @@ data class BankDetailsDto(
     val isHeadquarter: Boolean,
 
     @field:NotBlank(message = "SWIFT code is required")
-    @field:Pattern(regexp = "^[A-Z]{11}$", message = "SWIFT code must be exactly 11 capital letters")
+    @field:Pattern(regexp = "^[A-Z0-9]{11}$", message = "SWIFT code must be exactly 11 capital letters")
     val swiftCode: String
 ) {
     fun toHeadquartersEntity(branches: MutableList<BranchEntity>) = HeadquartersEntity(

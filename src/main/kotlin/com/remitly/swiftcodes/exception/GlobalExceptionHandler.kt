@@ -70,14 +70,6 @@ class GlobalExceptionHandler {
             HttpStatus.CONFLICT
         )
     }
-
-    @ExceptionHandler(Exception::class)
-    fun handleUnexpectedException(ex: Exception): ResponseEntity<ErrorResponse> {
-        return ResponseEntity(
-            ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unexpected error occurred", emptyMap()),
-            HttpStatus.INTERNAL_SERVER_ERROR
-        )
-    }
 }
 
 data class ErrorResponse(

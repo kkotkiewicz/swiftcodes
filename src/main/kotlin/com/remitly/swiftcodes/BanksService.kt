@@ -1,5 +1,6 @@
 package com.remitly.swiftcodes
 
+import com.remitly.swiftcodes.config.CountryMapping
 import com.remitly.swiftcodes.exception.*
 import com.remitly.swiftcodes.repository.BranchRepository
 import com.remitly.swiftcodes.repository.HeadquartersRepository
