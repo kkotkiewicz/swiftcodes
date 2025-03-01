@@ -41,7 +41,7 @@ class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(BankWithSwiftCodeExists::class)
-    fun handleBankExistsException(ex: BankNotFoundException): ResponseEntity<ErrorResponse> {
+    fun handleBankWithSwiftCodeExists(ex: BankWithSwiftCodeExists): ResponseEntity<ErrorResponse> {
         return ResponseEntity(
             ErrorResponse(ex.message ?: "Bank already exists"),
             HttpStatus.BAD_REQUEST

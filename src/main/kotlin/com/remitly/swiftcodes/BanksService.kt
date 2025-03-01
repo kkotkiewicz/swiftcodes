@@ -1,7 +1,6 @@
 package com.remitly.swiftcodes
 
-import com.remitly.swiftcodes.config.CountryMapping
-import com.remitly.swiftcodes.config.HEADQUARTERS_REGEX
+import com.remitly.swiftcodes.mapper.CountryMapper
 import com.remitly.swiftcodes.config.HEADQUARTERS_SUFFIX
 import com.remitly.swiftcodes.exception.BankNotFoundException
 import com.remitly.swiftcodes.exception.BankWithSwiftCodeExists
@@ -22,6 +21,7 @@ import org.springframework.stereotype.Service
 class BanksService(
     private val headquartersRepository: HeadquartersRepository,
     private val branchRepository: BranchRepository,
+    private val countryMapper: CountryMapper
 ) {
     fun getBankDetails(swiftCode: String): BankDetails {
         if (isHeadquarters(swiftCode)) {
@@ -35,7 +35,7 @@ class BanksService(
     }
 
     fun getBankDetailsByCountry(countryISO2: String): CountryBankDetails {
-        val countryName = CountryMapping.getCountryName(countryISO2)
+        val countryName = countryMapper.getCountryName(countryISO2)
 
         val swiftCodes = branchRepository.findAllByCountryISO2(countryISO2).map { it.toBankBranchDetails() } +
                 headquartersRepository.findAllByCountryISO2(countryISO2).map { it.toBankBranchDetails() }
@@ -68,7 +68,7 @@ class BanksService(
     }
 
     private fun validateCountryName(bankDetails: BankDetailsDto) {
-        val expectedCountryName = CountryMapping.getCountryName(bankDetails.countryISO2)
+        val expectedCountryName = countryMapper.getCountryName(bankDetails.countryISO2)
         if (!bankDetails.countryName.equals(expectedCountryName, ignoreCase = true)) {
             throw InvalidCountryCodeException("Country name: ${bankDetails.countryName} does not match expected country name: $expectedCountryName")
         }
@@ -133,7 +133,7 @@ class BanksService(
     }
 
     private fun isHeadquarters(swiftCode: String): Boolean {
-        return swiftCode.matches(HEADQUARTERS_REGEX)
+        return swiftCode.matches(Regex("^.{8,}$HEADQUARTERS_SUFFIX$"))
     }
 
     private fun getHeadquartersSwiftCode(swiftCode: String): String {

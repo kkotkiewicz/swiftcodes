@@ -1,5 +1,6 @@
 package com.remitly.swiftcodes.config
 
+import com.remitly.swiftcodes.mapper.CountryMapper
 import com.remitly.swiftcodes.model.dto.BankDetailsDto
 import com.remitly.swiftcodes.repository.BranchRepository
 import com.remitly.swiftcodes.repository.HeadquartersRepository
@@ -10,13 +11,16 @@ import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.io.ClassPathResource
+import org.springframework.stereotype.Component
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
 @Configuration
 class DataInitializer(
     private val headquartersRepository: HeadquartersRepository,
-    private val branchRepository: BranchRepository
+    private val branchRepository: BranchRepository,
+    private val countryMapper: CountryMapper,
+    private val fileReader: FileReader
 ) {
     @Bean
     fun initDatabase(): ApplicationRunner {
@@ -25,7 +29,6 @@ class DataInitializer(
                 val banks = parseCsv(CSV_FILE_NAME) ?: return@ApplicationRunner
                 val headquarters = banks.filter { it.isHeadquarter }
                 val branches = banks.filterNot { it.isHeadquarter }
-
                 headquartersRepository.saveAll(headquarters.map { it.toHeadquartersEntity(mutableListOf()) })
                 val branchEntities = branches.mapNotNull { branch ->
                     val headquartersForBranch = headquartersRepository.findById(
@@ -43,14 +46,12 @@ class DataInitializer(
         }
     }
 
-    private fun parseCsv(filename: String): List<BankDetailsDto>? {
-        val inputStream = ClassPathResource(filename).inputStream
-        val reader = BufferedReader(InputStreamReader(inputStream))
+     fun parseCsv(filename: String): List<BankDetailsDto>? {
+        val reader = fileReader.getReader(filename)
 
         CSVParser(reader, CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).setTrim(true).setIgnoreSurroundingSpaces(true).build()).use { csvParser ->
             val columnMap: Map<String, Int>
             try {
-                println(csvParser.headerNames)
                 columnMap = mapColumns(csvParser.headerNames)
             } catch (ex: IllegalArgumentException) {
                 println(ex.message)
@@ -60,19 +61,19 @@ class DataInitializer(
         }
     }
 
-    private fun mapColumns(headers: List<String>): Map<String, Int> {
+     fun mapColumns(headers: List<String>): Map<String, Int> {
         val expectedColumns = setOf(COUNTRY_ISO2, SWIFT_CODE, BANK_NAME, COUNTRY_NAME)
 
         val columnMap = headers.withIndex().associate { (index, name) -> name.uppercase() to index }
 
         if (!expectedColumns.all { it in columnMap }) {
-            throw IllegalArgumentException("CSV does not contain all required columns: $expectedColumns, columns found: ${headers}")
+            throw IllegalArgumentException("CSV does not contain all required columns: $expectedColumns, columns found: $headers")
         }
 
         return columnMap
     }
 
-    private fun parseRecord(record: CSVRecord, columnMap: Map<String, Int>): BankDetailsDto? {
+     fun parseRecord(record: CSVRecord, columnMap: Map<String, Int>): BankDetailsDto? {
         try {
             val swiftCode = record.get(columnMap[SWIFT_CODE]!!)
             val countryISO2 = record.get(columnMap[COUNTRY_ISO2]!!)
@@ -80,7 +81,7 @@ class DataInitializer(
             val bankName = record.get(columnMap[BANK_NAME]!!)
             val address = columnMap[ADDRESS]?.let { record.get(it).takeIf { it.isNotBlank() } }
 
-            if (!CountryMapping.getCountryName(countryISO2).equals(countryName, ignoreCase = true)) {
+            if (!countryMapper.getCountryName(countryISO2).equals(countryName, ignoreCase = true)) {
                 return null
             }
 
@@ -98,3 +99,10 @@ class DataInitializer(
     }
 }
 
+@Component
+class FileReader {
+    fun getReader(filename: String): BufferedReader {
+        val inputStream = ClassPathResource(filename).inputStream
+        return BufferedReader(InputStreamReader(inputStream))
+    }
+}
