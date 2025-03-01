@@ -1,7 +1,7 @@
 package com.remitly.swiftcodes.model.entity
 
-import com.remitly.swiftcodes.model.BankBranchDetails
-import com.remitly.swiftcodes.model.BankDetails
+import com.remitly.swiftcodes.model.response.BankBranchDetails
+import com.remitly.swiftcodes.model.response.BankDetails
 import jakarta.persistence.Id
 import jakarta.persistence.Entity
 import jakarta.persistence.Column

@@ -1,6 +1,5 @@
 package com.remitly.swiftcodes.model.dto
 
-import com.remitly.swiftcodes.model.BankBranchDetails
 import com.remitly.swiftcodes.model.entity.BranchEntity
 import com.remitly.swiftcodes.model.entity.HeadquartersEntity
 import jakarta.validation.constraints.NotBlank

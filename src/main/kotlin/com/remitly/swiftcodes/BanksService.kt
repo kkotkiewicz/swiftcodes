@@ -9,9 +9,9 @@ import com.remitly.swiftcodes.exception.HeadquartersMismatchException
 import com.remitly.swiftcodes.exception.InvalidCountryCodeException
 import com.remitly.swiftcodes.exception.CannotDeleteHeadquartersException
 import com.remitly.swiftcodes.exception.InvalidSwiftCodeException
-import com.remitly.swiftcodes.model.BankDetails
-import com.remitly.swiftcodes.model.CountryBankDetails
-import com.remitly.swiftcodes.model.Message
+import com.remitly.swiftcodes.model.response.BankDetails
+import com.remitly.swiftcodes.model.response.CountryBankDetails
+import com.remitly.swiftcodes.model.response.Message
 import com.remitly.swiftcodes.model.dto.BankDetailsDto
 import com.remitly.swiftcodes.repository.BranchRepository
 import com.remitly.swiftcodes.repository.HeadquartersRepository
@@ -118,7 +118,7 @@ class BanksService(
             throw BankNotFoundException("Headquarters not found with SWIFT code: $swiftCode")
         }
 
-        if (branchRepository.findAllByHeadquarters_SwiftCode(swiftCode).isNotEmpty()) {
+        if (headquartersRepository.findById(swiftCode).get().branches.isNotEmpty()) {
             throw CannotDeleteHeadquartersException("Cannot delete headquarters because it has branches. Delete all branches first.")
         }
 

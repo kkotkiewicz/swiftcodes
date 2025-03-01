@@ -1,8 +1,8 @@
 package com.remitly.swiftcodes
 
-import com.remitly.swiftcodes.model.BankDetails
-import com.remitly.swiftcodes.model.CountryBankDetails
-import com.remitly.swiftcodes.model.Message
+import com.remitly.swiftcodes.model.response.BankDetails
+import com.remitly.swiftcodes.model.response.CountryBankDetails
+import com.remitly.swiftcodes.model.response.Message
 import com.remitly.swiftcodes.model.dto.BankDetailsDto
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Pattern

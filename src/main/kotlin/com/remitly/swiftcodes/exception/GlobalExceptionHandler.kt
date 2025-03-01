@@ -1,5 +1,6 @@
 package com.remitly.swiftcodes.exception
 
+import com.remitly.swiftcodes.model.response.ErrorResponse
 import jakarta.validation.ConstraintViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -17,7 +18,7 @@ class GlobalExceptionHandler {
             (it as FieldError).field to it.defaultMessage
         }
         return ResponseEntity(
-            ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation failed", errors),
+            ErrorResponse("Validation failed", errors),
             HttpStatus.BAD_REQUEST
         )
     }
@@ -26,7 +27,7 @@ class GlobalExceptionHandler {
     fun handleConstraintViolation(ex: ConstraintViolationException): ResponseEntity<ErrorResponse> {
         val errors = ex.constraintViolations.associate { it.propertyPath.toString() to it.message }
         return ResponseEntity(
-            ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation failed", errors),
+            ErrorResponse("Validation failed", errors),
             HttpStatus.BAD_REQUEST
         )
     }
@@ -34,7 +35,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(BankNotFoundException::class)
     fun handleBankNotFoundException(ex: BankNotFoundException): ResponseEntity<ErrorResponse> {
         return ResponseEntity(
-            ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.message ?: "Bank not found", emptyMap()),
+            ErrorResponse(ex.message ?: "Bank not found"),
             HttpStatus.NOT_FOUND
         )
     }
@@ -42,7 +43,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(BankWithSwiftCodeExists::class)
     fun handleBankExistsException(ex: BankNotFoundException): ResponseEntity<ErrorResponse> {
         return ResponseEntity(
-            ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.message ?: "Bank already exists", emptyMap()),
+            ErrorResponse(ex.message ?: "Bank already exists"),
             HttpStatus.BAD_REQUEST
         )
     }
@@ -50,7 +51,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(InvalidSwiftCodeException::class)
     fun handleInvalidSwiftCodeException(ex: InvalidSwiftCodeException): ResponseEntity<ErrorResponse> {
         return ResponseEntity(
-            ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.message ?: "Invalid SWIFT code", emptyMap()),
+            ErrorResponse(ex.message ?: "Invalid SWIFT code"),
             HttpStatus.BAD_REQUEST
         )
     }
@@ -58,7 +59,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCountryCodeException::class)
     fun handleInvalidCountryCodeException(ex: InvalidCountryCodeException): ResponseEntity<ErrorResponse> {
         return ResponseEntity(
-            ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.message ?: "Invalid country ISO2 code", emptyMap()),
+            ErrorResponse(ex.message ?: "Invalid country ISO2 code"),
             HttpStatus.BAD_REQUEST
         )
     }
@@ -66,7 +67,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(HeadquartersMismatchException::class)
     fun handleHeadquartersMismatchException(ex: HeadquartersMismatchException): ResponseEntity<ErrorResponse> {
         return ResponseEntity(
-            ErrorResponse(HttpStatus.CONFLICT.value(), ex.message ?: "Headquarters mismatch", emptyMap()),
+            ErrorResponse(ex.message ?: "Headquarters mismatch"),
             HttpStatus.CONFLICT
         )
     }
@@ -74,14 +75,8 @@ class GlobalExceptionHandler {
     @ExceptionHandler(CannotDeleteHeadquartersException::class)
     fun handleCannotDeleteHeadquartersException(ex: CannotDeleteHeadquartersException): ResponseEntity<ErrorResponse> {
         return ResponseEntity(
-            ErrorResponse(HttpStatus.CONFLICT.value(), ex.message ?: "Cannot delete headquarters", emptyMap()),
+            ErrorResponse(ex.message ?: "Cannot delete headquarters"),
             HttpStatus.CONFLICT
         )
     }
 }
-
-data class ErrorResponse(
-    val status: Int,
-    val message: String,
-    val errors: Map<String, String?>
-)

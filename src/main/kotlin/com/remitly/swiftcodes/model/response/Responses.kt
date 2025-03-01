@@ -1,4 +1,4 @@
-package com.remitly.swiftcodes.model
+package com.remitly.swiftcodes.model.response
 
 import com.fasterxml.jackson.annotation.JsonInclude
 

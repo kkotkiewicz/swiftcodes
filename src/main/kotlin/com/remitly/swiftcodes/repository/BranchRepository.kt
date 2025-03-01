@@ -7,6 +7,4 @@ import org.springframework.stereotype.Repository
 @Repository
 interface BranchRepository: JpaRepository<BranchEntity, String> {
     fun findAllByCountryISO2(countryISO2: String): List<BranchEntity>
-
-    fun findAllByHeadquarters_SwiftCode(swiftCode: String): List<BranchEntity>
 }
