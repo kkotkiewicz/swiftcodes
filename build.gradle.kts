@@ -32,8 +32,10 @@ dependencies {
 	testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 	testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+	runtimeOnly("com.h2database:h2")
 }
 
 kotlin {
