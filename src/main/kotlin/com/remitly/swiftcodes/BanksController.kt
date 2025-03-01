@@ -1,9 +1,10 @@
 package com.remitly.swiftcodes
 
-import com.remitly.swiftcodes.entity.BranchEntity
-import com.remitly.swiftcodes.entity.HeadquartersEntity
+import com.remitly.swiftcodes.model.BankDetails
+import com.remitly.swiftcodes.model.CountryBankDetails
+import com.remitly.swiftcodes.model.Message
+import com.remitly.swiftcodes.model.dto.BankDetailsDto
 import jakarta.validation.Valid
-import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -49,50 +50,4 @@ class SwiftCodesController(
     ): Message {
         return banksService.deleteBankDetails(swiftCode)
     }
-}
-
-data class BankDetailsDto(
-    val address: String? = null,
-
-    @field:NotBlank(message = "Bank name is required")
-    val bankName: String,
-
-    @field:NotBlank(message = "Country ISO2 code is required")
-    @field:Pattern(regexp = "^[A-Z]{2}$", message = "Country ISO2 code must be exactly 2 capital letters")
-    val countryISO2: String,
-
-    @field:NotBlank(message = "Country name is required")
-    val countryName: String,
-
-    val isHeadquarter: Boolean,
-
-    @field:NotBlank(message = "SWIFT code is required")
-    @field:Pattern(regexp = "^[A-Z0-9]{11}$", message = "SWIFT code must be exactly 11 capital letters")
-    val swiftCode: String
-) {
-    fun toHeadquartersEntity(branches: MutableList<BranchEntity>) = HeadquartersEntity(
-        swiftCode = swiftCode,
-        countryISO2 = countryISO2,
-        countryName = countryName,
-        bankName = bankName,
-        address = address,
-        branches = branches,
-    )
-
-    fun toBranchEntity(headquartersSwiftCode: String) = BranchEntity(
-        swiftCode = swiftCode,
-        countryISO2 = countryISO2,
-        countryName = countryName,
-        bankName = bankName,
-        address = address,
-        headquartersId = headquartersSwiftCode
-    )
-
-    fun toBranchBankDetails() = BankBranchDetails(
-        swiftCode = swiftCode,
-        countryISO2 = countryISO2,
-        bankName = bankName,
-        address = address,
-        isHeadquarter = isHeadquarter,
-    )
 }

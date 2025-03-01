@@ -1,6 +1,6 @@
 package com.remitly.swiftcodes.repository
 
-import com.remitly.swiftcodes.entity.BranchEntity
+import com.remitly.swiftcodes.model.entity.BranchEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 
@@ -8,5 +8,5 @@ import org.springframework.stereotype.Repository
 interface BranchRepository: JpaRepository<BranchEntity, String> {
     fun findAllByCountryISO2(countryISO2: String): List<BranchEntity>
 
-    fun findAllByHeadquartersId(swiftCode: String): List<BranchEntity>
+    fun findAllByHeadquarters_SwiftCode(swiftCode: String): List<BranchEntity>
 }

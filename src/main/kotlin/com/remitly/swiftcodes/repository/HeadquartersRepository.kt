@@ -1,6 +1,6 @@
 package com.remitly.swiftcodes.repository
 
-import com.remitly.swiftcodes.entity.HeadquartersEntity
+import com.remitly.swiftcodes.model.entity.HeadquartersEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 

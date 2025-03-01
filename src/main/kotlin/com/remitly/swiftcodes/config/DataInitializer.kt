@@ -1,8 +1,11 @@
 package com.remitly.swiftcodes.config
 
-import com.remitly.swiftcodes.BankDetailsDto
+import com.remitly.swiftcodes.model.dto.BankDetailsDto
 import com.remitly.swiftcodes.repository.BranchRepository
 import com.remitly.swiftcodes.repository.HeadquartersRepository
+import org.apache.commons.csv.CSVFormat
+import org.apache.commons.csv.CSVParser
+import org.apache.commons.csv.CSVRecord
 import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -19,60 +22,79 @@ class DataInitializer(
     fun initDatabase(): ApplicationRunner {
         return ApplicationRunner {
             if (headquartersRepository.count() == 0L && branchRepository.count() == 0L) {
-                val banks = parseCsv("swift_codes.csv")
+                val banks = parseCsv(CSV_FILE_NAME) ?: return@ApplicationRunner
                 val headquarters = banks.filter { it.isHeadquarter }
                 val branches = banks.filterNot { it.isHeadquarter }
 
                 headquartersRepository.saveAll(headquarters.map { it.toHeadquartersEntity(mutableListOf()) })
-                branchRepository.saveAll(branches.map {
-                    it.toBranchEntity(it.swiftCode.replaceRange(
-                        it.swiftCode.length - 3,
-                        it.swiftCode.length,
-                        "XXX"
-                    ))
-                })
+                val branchEntities = branches.mapNotNull { branch ->
+                    val headquartersForBranch = headquartersRepository.findById(
+                        branch.swiftCode.replaceRange(branch.swiftCode.length - 3, branch.swiftCode.length, HEADQUARTERS_SUFFIX)
+                    )
+                    if (headquartersForBranch.isPresent) {
+                        branch.toBranchEntity(headquartersForBranch.get())
+                    } else null
+                }
 
-                println("Database initialized with ${headquarters.size} headquarters and ${branches.size} branches.")
+                branchRepository.saveAll(branchEntities)
+
+                println("Database initialized with ${headquartersRepository.count()} headquarters and ${branchRepository.count()} branches.")
             }
         }
     }
 
-    private fun parseCsv(filename: String): List<BankDetailsDto> {
+    private fun parseCsv(filename: String): List<BankDetailsDto>? {
         val inputStream = ClassPathResource(filename).inputStream
         val reader = BufferedReader(InputStreamReader(inputStream))
 
-        val headers = reader.readLine().split("\t").map { it.trim() }
-        val columnMap = mapColumns(headers)
-
-        return reader.lineSequence()
-            .mapNotNull { line -> parseLine(line, columnMap) }
-            .toList()
+        CSVParser(reader, CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).setTrim(true).setIgnoreSurroundingSpaces(true).build()).use { csvParser ->
+            val columnMap: Map<String, Int>
+            try {
+                println(csvParser.headerNames)
+                columnMap = mapColumns(csvParser.headerNames)
+            } catch (ex: IllegalArgumentException) {
+                println(ex.message)
+                return null
+            }
+            return csvParser.records.mapNotNull { parseRecord(it, columnMap) }
+        }
     }
 
     private fun mapColumns(headers: List<String>): Map<String, Int> {
-        val expectedColumns = setOf(
-            "COUNTRY ISO2 CODE", "SWIFT CODE", "NAME", "ADDRESS", "COUNTRY NAME"
-        )
+        val expectedColumns = setOf(COUNTRY_ISO2, SWIFT_CODE, BANK_NAME, COUNTRY_NAME)
+
         val columnMap = headers.withIndex().associate { (index, name) -> name.uppercase() to index }
 
         if (!expectedColumns.all { it in columnMap }) {
-            throw IllegalArgumentException("CSV does not contain all required columns: $expectedColumns")
+            throw IllegalArgumentException("CSV does not contain all required columns: $expectedColumns, columns found: ${headers}")
         }
 
         return columnMap
     }
 
-    private fun parseLine(line: String, columnMap: Map<String, Int>): BankDetailsDto? {
-        val columns = line.split("\t").map { it.trim() }
+    private fun parseRecord(record: CSVRecord, columnMap: Map<String, Int>): BankDetailsDto? {
+        try {
+            val swiftCode = record.get(columnMap[SWIFT_CODE]!!)
+            val countryISO2 = record.get(columnMap[COUNTRY_ISO2]!!)
+            val countryName = record.get(columnMap[COUNTRY_NAME]!!)
+            val bankName = record.get(columnMap[BANK_NAME]!!)
+            val address = columnMap[ADDRESS]?.let { record.get(it).takeIf { it.isNotBlank() } }
 
-        val swiftCode = columns[columnMap["SWIFT CODE"]!!]
-        return BankDetailsDto(
-            bankName = columns[columnMap["NAME"]!!],
-            countryISO2 = columns[columnMap["COUNTRY ISO2 CODE"]!!],
-            countryName = columns[columnMap["COUNTRY NAME"]!!],
-            swiftCode = swiftCode,
-            address = columnMap["ADDRESS"]?.let { columns[it].takeIf { it.isNotBlank() } },
-            isHeadquarter = swiftCode.endsWith("XXX")
-        )
+            if (!CountryMapping.getCountryName(countryISO2).equals(countryName, ignoreCase = true)) {
+                return null
+            }
+
+            return BankDetailsDto(
+                bankName = bankName,
+                countryISO2 = countryISO2,
+                countryName = countryName,
+                swiftCode = swiftCode,
+                address = address,
+                isHeadquarter = swiftCode.endsWith(HEADQUARTERS_SUFFIX)
+            )
+        } catch (ex: Exception) {
+            return null
+        }
     }
 }
+

@@ -1,8 +1,12 @@
-package com.remitly.swiftcodes.entity
+package com.remitly.swiftcodes.model.entity
 
-import com.remitly.swiftcodes.BankBranchDetails
-import com.remitly.swiftcodes.BankDetails
-import jakarta.persistence.*
+import com.remitly.swiftcodes.model.BankBranchDetails
+import com.remitly.swiftcodes.model.BankDetails
+import jakarta.persistence.Column
+import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
+import jakarta.persistence.Entity
 
 @Entity
 class BranchEntity(
@@ -13,8 +17,9 @@ class BranchEntity(
     var countryISO2: String,
     var countryName: String,
     var address: String?,
-    @Column(name = "headquarters_swift_code", nullable = false)
-    var headquartersId: String,
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "headquarters_swift_code", nullable = false)
+    var headquarters: HeadquartersEntity,
 ) {
     fun toBankDetails(): BankDetails = BankDetails(
         swiftCode = swiftCode,

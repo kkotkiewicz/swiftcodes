@@ -1,8 +1,13 @@
-package com.remitly.swiftcodes.entity
+package com.remitly.swiftcodes.model.entity
 
-import com.remitly.swiftcodes.BankBranchDetails
-import com.remitly.swiftcodes.BankDetails
-import jakarta.persistence.*
+import com.remitly.swiftcodes.model.BankBranchDetails
+import com.remitly.swiftcodes.model.BankDetails
+import jakarta.persistence.Id
+import jakarta.persistence.Entity
+import jakarta.persistence.Column
+import jakarta.persistence.OneToMany
+import jakarta.persistence.CascadeType
+import jakarta.persistence.FetchType
 
 @Entity
 class HeadquartersEntity(
@@ -13,7 +18,7 @@ class HeadquartersEntity(
     var countryISO2: String,
     var countryName: String,
     var address: String?,
-    @OneToMany(mappedBy = "headquartersId", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "headquarters", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
     var branches: MutableList<BranchEntity> = mutableListOf()
 ) {
 

@@ -1,7 +1,18 @@
 package com.remitly.swiftcodes
 
 import com.remitly.swiftcodes.config.CountryMapping
-import com.remitly.swiftcodes.exception.*
+import com.remitly.swiftcodes.config.HEADQUARTERS_REGEX
+import com.remitly.swiftcodes.config.HEADQUARTERS_SUFFIX
+import com.remitly.swiftcodes.exception.BankNotFoundException
+import com.remitly.swiftcodes.exception.BankWithSwiftCodeExists
+import com.remitly.swiftcodes.exception.HeadquartersMismatchException
+import com.remitly.swiftcodes.exception.InvalidCountryCodeException
+import com.remitly.swiftcodes.exception.CannotDeleteHeadquartersException
+import com.remitly.swiftcodes.exception.InvalidSwiftCodeException
+import com.remitly.swiftcodes.model.BankDetails
+import com.remitly.swiftcodes.model.CountryBankDetails
+import com.remitly.swiftcodes.model.Message
+import com.remitly.swiftcodes.model.dto.BankDetailsDto
 import com.remitly.swiftcodes.repository.BranchRepository
 import com.remitly.swiftcodes.repository.HeadquartersRepository
 import jakarta.transaction.Transactional
@@ -34,31 +45,14 @@ class BanksService(
 
     @Transactional
     fun saveBankDetails(bankDetails: BankDetailsDto): Message {
-        val countryName = CountryMapping.getCountryName(bankDetails.countryISO2)
-        if (!bankDetails.countryName.contentEquals(countryName, ignoreCase = true)) {
-            throw InvalidCountryCodeException("Country name: ${bankDetails.countryName} does not match expected country name: $countryName")
-        }
-
-        val isHeadquarter = isHeadquarters(bankDetails.swiftCode)
-        if (isHeadquarter != bankDetails.isHeadquarter) {
-            throw HeadquartersMismatchException(
-                if (bankDetails.isHeadquarter) {
-                    "Headquarters SWIFT code must be 11 chars long and end with 'XXX'"
-                } else {
-                    "Branch SWIFT code must be 11 chars long and must not end with 'XXX'"
-                }
-            )
-        }
+        validateCountryName(bankDetails)
+        validateSwiftCode(bankDetails)
+        checkExistence(bankDetails)
 
         if (!bankDetails.isHeadquarter) {
-            val headquarters = headquartersRepository.findById(getHeadquartersSwiftCode(bankDetails.swiftCode))
-                .orElseThrow { BankNotFoundException("Headquarters not found for branch SWIFT code: ${bankDetails.swiftCode}") }
-
-            headquarters.branches + bankDetails.toBranchBankDetails()
-            headquartersRepository.save(headquarters)
-            branchRepository.save(bankDetails.toBranchEntity(headquarters.swiftCode))
+            saveBranch(bankDetails)
         } else {
-            headquartersRepository.save(bankDetails.toHeadquartersEntity(mutableListOf()))
+            saveHeadquarters(bankDetails)
         }
 
         return Message("Successfully saved bank information for SWIFT code ${bankDetails.swiftCode}")
@@ -66,50 +60,87 @@ class BanksService(
 
     fun deleteBankDetails(swiftCode: String): Message {
         if (isHeadquarters(swiftCode)) {
-            if (branchRepository.findAllByHeadquartersId(swiftCode).isEmpty()) {
-                headquartersRepository.deleteById(swiftCode)
-            } else {
-                throw CannotDeleteHeadquartersException("Cannot delete headquarters because it has branches. Delete all branches first.")
-            }
+            deleteHeadquarters(swiftCode)
         } else {
-            branchRepository.deleteById(swiftCode)
+            deleteBranch(swiftCode)
         }
         return Message("Successfully deleted bank details for SWIFT code $swiftCode")
     }
 
-    private fun isHeadquarters(swiftCode: String): Boolean = Regex("^.{8,}XXX\$").matches(swiftCode)
+    private fun validateCountryName(bankDetails: BankDetailsDto) {
+        val expectedCountryName = CountryMapping.getCountryName(bankDetails.countryISO2)
+        if (!bankDetails.countryName.equals(expectedCountryName, ignoreCase = true)) {
+            throw InvalidCountryCodeException("Country name: ${bankDetails.countryName} does not match expected country name: $expectedCountryName")
+        }
+    }
+
+    private fun validateSwiftCode(bankDetails: BankDetailsDto) {
+        val isHeadquarter = isHeadquarters(bankDetails.swiftCode)
+        if (isHeadquarter != bankDetails.isHeadquarter) {
+            throw HeadquartersMismatchException(
+                if (bankDetails.isHeadquarter) {
+                    "Headquarters SWIFT code must be 11 chars long and end with '$HEADQUARTERS_SUFFIX'"
+                } else {
+                    "Branch SWIFT code must be 11 chars long and must not end with '$HEADQUARTERS_SUFFIX'"
+                }
+            )
+        }
+    }
+
+    private fun checkExistence(bankDetails: BankDetailsDto) {
+        val existsInRepo = if (bankDetails.isHeadquarter) {
+            headquartersRepository.existsById(bankDetails.swiftCode)
+        } else {
+            branchRepository.existsById(bankDetails.swiftCode)
+        }
+
+        if (existsInRepo) {
+            throw BankWithSwiftCodeExists("Bank with SWIFT code: ${bankDetails.swiftCode} already exists")
+        }
+    }
+
+    private fun saveHeadquarters(bankDetails: BankDetailsDto): Message {
+        headquartersRepository.save(bankDetails.toHeadquartersEntity(mutableListOf()))
+        return Message("Successfully saved headquarters for SWIFT code ${bankDetails.swiftCode}")
+    }
+
+    private fun saveBranch(bankDetails: BankDetailsDto): Message {
+        val headquartersSwiftCode = getHeadquartersSwiftCode(bankDetails.swiftCode)
+        val headquarters = headquartersRepository.findById(headquartersSwiftCode)
+            .orElseThrow { BankNotFoundException("Headquarters not found for branch SWIFT code: ${bankDetails.swiftCode}") }
+
+        branchRepository.save(bankDetails.toBranchEntity(headquarters))
+        return Message("Successfully saved branch for SWIFT code ${bankDetails.swiftCode}")
+    }
+
+    private fun deleteHeadquarters(swiftCode: String) {
+        if (!headquartersRepository.existsById(swiftCode)) {
+            throw BankNotFoundException("Headquarters not found with SWIFT code: $swiftCode")
+        }
+
+        if (branchRepository.findAllByHeadquarters_SwiftCode(swiftCode).isNotEmpty()) {
+            throw CannotDeleteHeadquartersException("Cannot delete headquarters because it has branches. Delete all branches first.")
+        }
+
+        headquartersRepository.deleteById(swiftCode)
+    }
+
+    private fun deleteBranch(swiftCode: String) {
+        if (!branchRepository.existsById(swiftCode)) {
+            throw BankNotFoundException("Branch not found with SWIFT code: $swiftCode")
+        }
+        branchRepository.deleteById(swiftCode)
+    }
+
+    private fun isHeadquarters(swiftCode: String): Boolean {
+        return swiftCode.matches(HEADQUARTERS_REGEX)
+    }
 
     private fun getHeadquartersSwiftCode(swiftCode: String): String {
-        if (swiftCode.length >= 3)
-            return swiftCode.replaceRange(swiftCode.length - 3, swiftCode.length, "XXX")
-        else throw InvalidSwiftCodeException("Invalid SWIFT code: $swiftCode")
+        if (swiftCode.length >= 3) {
+            return swiftCode.replaceRange(swiftCode.length - 3, swiftCode.length, HEADQUARTERS_SUFFIX)
+        } else {
+            throw InvalidSwiftCodeException("Invalid SWIFT code: $swiftCode")
+        }
     }
 }
-
-data class BankDetails(
-    val address: String?,
-    val bankName: String,
-    val countryISO2: String,
-    val countryName: String,
-    val isHeadquarter: Boolean,
-    val swiftCode: String,
-    val branches: List<BankBranchDetails>?,
-)
-
-data class BankBranchDetails(
-    val address: String?,
-    val bankName: String,
-    val countryISO2: String,
-    val isHeadquarter: Boolean,
-    val swiftCode: String,
-)
-
-data class CountryBankDetails(
-    val countryISO2: String,
-    val countryName: String,
-    val swiftCodes: List<BankBranchDetails>,
-)
-
-data class Message(
-    val message: String,
-)

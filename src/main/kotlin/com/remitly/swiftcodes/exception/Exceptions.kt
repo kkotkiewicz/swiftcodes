@@ -6,6 +6,9 @@ import org.springframework.web.bind.annotation.ResponseStatus
 @ResponseStatus(HttpStatus.NOT_FOUND)
 class BankNotFoundException(message: String) : RuntimeException(message)
 
+@ResponseStatus(HttpStatus.NOT_FOUND)
+class BankWithSwiftCodeExists(message: String) : RuntimeException(message)
+
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 class InvalidSwiftCodeException(message: String) : RuntimeException(message)
 
